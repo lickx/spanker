@@ -1,5 +1,6 @@
-key REMOTE_MAGIC = "de6e3a3d-be8d-4cc8-b5da-73517c1de2cb";
-integer REMOTE_CH = 73517;
+
+integer CHANNEL = 73517;
+integer g_iHandle = 0;
 
 integer g_iLinkBum;
 integer g_iLinkTheme;
@@ -72,7 +73,7 @@ Reset()
     llSetTimerEvent(0.0);
 }
 
-HitLeft(integer iPlaySound, integer iPlayAnim)
+HitLeft()
 {
     if (g_iRlvOn && !g_iRlvLocked) {
         llOwnerSay("@detach=n");
@@ -81,13 +82,13 @@ HitLeft(integer iPlaySound, integer iPlayAnim)
     g_iCountLeft++;
     string sTexture = GetTexture(g_iCountLeft-1);
     SetTexture(SIDE_LEFT, sTexture);
-    if (iPlaySound) PlayRandomSound();
-    if (iPlayAnim) PlayRandomAnim();
+    PlayRandomSound();
+    PlayRandomAnim();
     g_iTimeLeft = llGetUnixTime() + TIME_HEAL;
     llSetTimerEvent(1.0);
 }
 
-HitRight(integer iPlaySound, integer iPlayAnim)
+HitRight()
 {
     if (g_iRlvOn && !g_iRlvLocked) {
         llOwnerSay("@detach=n");
@@ -96,8 +97,8 @@ HitRight(integer iPlaySound, integer iPlayAnim)
     g_iCountRight++;
     string sTexture = GetTexture(g_iCountRight-1);
     SetTexture(SIDE_RIGHT, sTexture);
-    if (iPlaySound) PlayRandomSound();
-    if (iPlayAnim) PlayRandomAnim();
+    PlayRandomSound();
+    PlayRandomAnim();
     g_iTimeRight = llGetUnixTime() + TIME_HEAL;
     llSetTimerEvent(1.0);
 }
@@ -113,11 +114,11 @@ default
         Reset();
         llPreloadSound("slap");
         if (llGetAttached()) llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
-        llListen(REMOTE_CH, "", "", "");
         // RLV detection:
+        g_iHandle = llListen(CHANNEL, "", "", "");
         g_iTimeRLV = llGetUnixTime() + 120;
         llSetTimerEvent(30.0);
-        llOwnerSay("@versionnew="+(string)REMOTE_CH);
+        llOwnerSay("@versionnew="+(string)CHANNEL);
     }
 
     on_rez(integer i)
@@ -133,8 +134,8 @@ default
     touch_end(integer i)
     {
         integer iLink = llDetectedLinkNumber(0);
-        if (iLink==g_iLinkLeft && g_iCountLeft < g_iNumOfStages) HitLeft(TRUE, TRUE);
-        if (iLink==g_iLinkRight && g_iCountRight < g_iNumOfStages) HitRight(TRUE, TRUE);
+        if (iLink==g_iLinkLeft && g_iCountLeft < g_iNumOfStages) HitLeft();
+        if (iLink==g_iLinkRight && g_iCountRight < g_iNumOfStages) HitRight();
     }
 
     timer()
@@ -142,13 +143,15 @@ default
         integer iTimeStamp = llGetUnixTime();
         
         if (g_iTimeRLV) {
-            if (g_iTimeRLV > iTimeStamp) llOwnerSay("@versionnew="+(string)REMOTE_CH);
+            if (g_iTimeRLV > iTimeStamp) llOwnerSay("@versionnew="+(string)CHANNEL);
             else {
                 // no rlv detected, we'll do without
                 g_iTimeRLV = 0;
                 g_iRlvOn = FALSE;
                 g_iRlvLocked = FALSE;
                 llSetTimerEvent(0.0);
+                llListenRemove(g_iHandle);
+                g_iHandle = 0;
             }
         }
 
@@ -191,71 +194,8 @@ default
             llSetTimerEvent(0.0);
             g_iTimeRLV = 0; // Reset RLV detection timer
             g_iRlvOn = TRUE;
-            return;
-        }
-        
-        list lParams = llParseString2List(sMsg, ["|"], []);
-        if (llGetListLength(lParams) <= 1) return;
-        key kMagic = llList2Key(lParams, 0);
-        if (kMagic != REMOTE_MAGIC) return;
-        string sCmd = llList2String(lParams, 1);
-        if (sCmd == "hit") {
-            integer iPlaySound = TRUE;
-            if (~llListFindList(lParams, ["no_sound"])) iPlaySound = FALSE;
-            integer iPlayAnim = TRUE;
-            if (~llListFindList(lParams, ["no_anim"])) iPlayAnim = FALSE;
-            // we just hit both sides. maybe we can alternate this instead?
-            integer iGotHit;
-            if (g_iCountLeft < g_iNumOfStages) {
-                HitLeft(iPlaySound, iPlayAnim);
-                iGotHit++;
-            }
-            if (g_iCountRight < g_iNumOfStages) {
-                HitRight(iPlaySound, iPlayAnim);
-                iGotHit++;
-            }
-            if (iGotHit) {
-                PlayRandomSound();
-                PlayRandomAnim();
-            }
-        } else if (sCmd == "hit_l" && g_iCountLeft < g_iNumOfStages) {
-            integer iPlaySound = TRUE;
-            if (~llListFindList(lParams, ["no_sound"])) iPlaySound = FALSE;
-            integer iPlayAnim = TRUE;
-            if (~llListFindList(lParams, ["no_anim"])) iPlayAnim = FALSE;
-            HitLeft(iPlaySound, iPlayAnim);
-        } else if (sCmd == "hit_r" && g_iCountRight < g_iNumOfStages) {
-            integer iPlaySound = TRUE;
-            if (~llListFindList(lParams, ["no_sound"])) iPlaySound = FALSE;
-            integer iPlayAnim = TRUE;
-            if (~llListFindList(lParams, ["no_anim"])) iPlayAnim = FALSE;
-            HitRight(iPlaySound, iPlayAnim);
-        } else if (sCmd == "load_theme") {
-            // load a theme with marks and switch to sounds with prefix sound_prefix
-            // msg syntax: REMOTE_HUD,"load_theme",sound_prefix,key1,key2 (up to 8 texture keys)
-            //TODO: sound_prefix is a string and can be "default", "crop", "paddle" etc
-            //      it will fill a list with sounds to use from inventory starting with this prefix
-            //SetupSoundPrefix(llList2String(lParams, 2));
-            
-            list lTheme = llList2List(lParams, 3, -1);
-            integer iLen = llGetListLength(lTheme);
-            if (iLen == 0) return;
-            if (iLen > 8) {
-                lTheme = llList2List(lTheme, 0, 7);
-                iLen = 8;
-            }
-            integer iMat;
-            // Fill theme prim with iLen total provided textures
-            for (iMat = 0; iMat < iLen; iMat++) {
-                llSetLinkPrimitiveParamsFast(g_iLinkTheme, [PRIM_TEXTURE, iMat, (string)llList2Key(lTheme, iMat), <1,1,1>, <0,0,0>, 0]);
-            }
-            // Fill remaining textures with blanks if we got less than 8
-            if (iLen < 8) {
-                for (iMat = iLen; iMat < 8; iMat++) {
-                    llSetLinkPrimitiveParamsFast(g_iLinkTheme, [PRIM_TEXTURE, iMat, TEXTURE_TRANSPARENT, <1,1,1>, <0,0,0>, 0]);
-                }
-            }
-            g_iNumOfStages = iLen;
+            llListenRemove(g_iHandle);
+            g_iHandle = 0;
         }
     }
 }
