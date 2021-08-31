@@ -1,5 +1,5 @@
 
-integer CHANNEL = 73517;
+integer g_iChannel;
 integer g_iHandle = 0;
 
 integer g_iLinkBum;
@@ -16,25 +16,24 @@ integer g_iTimeRight;
 
 integer g_iTimeRLV;
 
-integer TIME_HEAL = 10;
+integer TIME_HEAL = 20;
 integer SIDE_LEFT = 0;
 integer SIDE_RIGHT = 1;
 
-integer g_iNumOfStages = 8;
+integer g_iNumOfStages = 10;
 integer g_iRlvLocked = 0;
 integer g_iRlvOn = 0;
 
 string g_sCurAnim = "";
 
-string GetTexture(integer iFace)
-{
-    list l = llGetLinkPrimitiveParams(g_iLinkTheme, [PRIM_TEXTURE, iFace]);
-    return (string)llList2Key(l, 0);
-}
+string TEXTURE = "ccf8fd66-54a4-43bf-971f-56c347913724"; // Fill in your texture UUID here!
 
-SetTexture(integer iFace, string sTexture)
+SetRed(integer iFace, integer iIntensity)
 {
-    llSetLinkPrimitiveParamsFast(g_iLinkBum, [PRIM_TEXTURE, iFace, sTexture, <1,1,1>, <0,0,0>, 0]);
+    //float fAlpha = 1.0 - ((1.0 / g_iNumOfStages) * iIntensity);
+    float fAlpha = ((1.0 / g_iNumOfStages) * iIntensity);
+    llSetLinkPrimitiveParamsFast(g_iLinkBum, [PRIM_TEXTURE, iFace, TEXTURE, <1,1,1>, <0,0,0>, 0,
+                                            PRIM_COLOR, iFace, <1,1,1>, fAlpha]);
 }
 
 PlayRandomAnim()
@@ -63,7 +62,7 @@ PlayRandomSound()
 
 Reset()
 {
-    SetTexture(ALL_SIDES, TEXTURE_TRANSPARENT);
+    llSetLinkTexture(g_iLinkBum, TEXTURE_TRANSPARENT, ALL_SIDES);
     g_iCountLeft = 0;
     g_iCountRight = 0;
     if (g_iRlvOn && g_iRlvLocked) {
@@ -80,8 +79,7 @@ HitLeft()
         g_iRlvLocked = TRUE;
     }
     g_iCountLeft++;
-    string sTexture = GetTexture(g_iCountLeft-1);
-    SetTexture(SIDE_LEFT, sTexture);
+    SetRed(SIDE_LEFT, g_iCountLeft);
     PlayRandomSound();
     PlayRandomAnim();
     g_iTimeLeft = llGetUnixTime() + TIME_HEAL;
@@ -95,8 +93,7 @@ HitRight()
         g_iRlvLocked = TRUE;
     }
     g_iCountRight++;
-    string sTexture = GetTexture(g_iCountRight-1);
-    SetTexture(SIDE_RIGHT, sTexture);
+    SetRed(SIDE_RIGHT, g_iCountRight);
     PlayRandomSound();
     PlayRandomAnim();
     g_iTimeRight = llGetUnixTime() + TIME_HEAL;
@@ -115,10 +112,11 @@ default
         llPreloadSound("slap");
         if (llGetAttached()) llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
         // RLV detection:
-        g_iHandle = llListen(CHANNEL, "", "", "");
+        g_iChannel = 9999 + llRound(llFrand(9999999.0));
+        g_iHandle = llListen(g_iChannel, "", "", "");
         g_iTimeRLV = llGetUnixTime() + 120;
         llSetTimerEvent(30.0);
-        llOwnerSay("@versionnew="+(string)CHANNEL);
+        llOwnerSay("@versionnew="+(string)g_iChannel);
     }
 
     on_rez(integer i)
@@ -143,7 +141,7 @@ default
         integer iTimeStamp = llGetUnixTime();
         
         if (g_iTimeRLV) {
-            if (g_iTimeRLV > iTimeStamp) llOwnerSay("@versionnew="+(string)CHANNEL);
+            if (g_iTimeRLV > iTimeStamp) llOwnerSay("@versionnew="+(string)g_iChannel);
             else {
                 // no rlv detected, we'll do without
                 g_iTimeRLV = 0;
@@ -157,23 +155,19 @@ default
 
         if (g_iCountLeft && iTimeStamp >= g_iTimeLeft) {
             g_iCountLeft--;
-            string sTexture;
-            if (g_iCountLeft==0) sTexture = TEXTURE_TRANSPARENT;
+            if (g_iCountLeft==0) SetRed(SIDE_LEFT, 0);
             else {
-                sTexture = GetTexture(g_iCountLeft-1);
+                SetRed(SIDE_LEFT, g_iCountLeft);
                 g_iTimeLeft = llGetUnixTime() + TIME_HEAL;
             }
-            SetTexture(SIDE_LEFT, sTexture);
         }
         if (g_iCountRight && iTimeStamp >= g_iTimeRight) {
             g_iCountRight--;
-            string sTexture;
-            if (g_iCountRight==0) sTexture = TEXTURE_TRANSPARENT;
+            if (g_iCountRight==0) SetRed(SIDE_RIGHT, 0);
             else {
-                sTexture = GetTexture(g_iCountRight-1);
+                SetRed(SIDE_RIGHT, g_iCountRight);
                 g_iTimeRight = llGetUnixTime() + TIME_HEAL;
             }
-            SetTexture(SIDE_RIGHT, sTexture);
         }
         if (g_iCountLeft==0 && g_iCountRight==0) {
             if (g_iRlvOn && g_iRlvLocked) {
