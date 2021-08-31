@@ -1,11 +1,11 @@
 
 1) Rez rigged bum, name it 'bum'. Rigged attachments can't receive clicks.
 
-2) Rez theme, name it 'Ruth2v4 spanker'
+2) Rez a cube as rootprim, name it 'Ruth2v4 spanker'
 
-3) Apply textures 1 - 8 to faces 0 - 7 of the theme prim
+3) Apply the default transparent texture to the cube
 
-4) Position theme inside bum, and link the bum to it
+4) Position the cube inside bum, and link the bum to it
 
 5) Rez two spheres, each 0.2 in x/y/z size, with transparent texture applied
 
@@ -15,8 +15,6 @@
 
 8) Copy animation, sound and script inside the rootprim
 
-9) Set the color of the linkset to bright red or dark red
-
 9) Take the linkset in inventory, attach to pelvis. This is important,
    otherwise the non-rigged clickable spheres won't cover the avi's bum.
 
@@ -25,6 +23,5 @@
 
 * Spheres can be repositioned if clicks aren't received well
 
-* Adjust color to your preference (can be done once for the entire linkset)
-
+* The full effect color and transparancy can be adjusted in the photoshop file
 
