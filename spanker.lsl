@@ -46,7 +46,7 @@ PlayRandomAnim()
     if (iNumAnims == 0) return;
     if (g_sCurAnim != "") llStopAnimation(g_sCurAnim);
     if (iNumAnims == 1) g_sCurAnim = llGetInventoryName(INVENTORY_ANIMATION, 0);
-    else g_sCurAnim = llGetInventoryName(INVENTORY_ANIMATION, llFrand(iNumAnims));
+    else g_sCurAnim = llGetInventoryName(INVENTORY_ANIMATION, (integer)llFrand(iNumAnims));
     llStartAnimation(g_sCurAnim);
 }
 
@@ -56,7 +56,7 @@ PlayRandomSound()
     string sSound;
     if (iNumSounds == 0) return;
     else if (iNumSounds == 1) sSound = llGetInventoryName(INVENTORY_SOUND, 0);
-    else sSound = llGetInventoryName(INVENTORY_SOUND, llFrand(iNumSounds));
+    else sSound = llGetInventoryName(INVENTORY_SOUND, (integer)llFrand(iNumSounds));
     llPlaySound(sSound, 1.0);
 }
 
@@ -131,6 +131,13 @@ default
 
     touch_end(integer i)
     {
+        key kAV = llDetectedKey(0);
+        vector kAVPos = llList2Vector(llGetObjectDetails(kAV, [OBJECT_POS]), 0);
+        // note: 10.0=whisper, 20.0=say/chat, 100.0=shout distance.
+        if (llVecDist(llGetPos(), kAVPos) > 10.0) {
+            llRegionSayTo(kAV, 0, "You're too far away!");
+            return;
+        }
         integer iLink = llDetectedLinkNumber(0);
         if (iLink==g_iLinkLeft && g_iCountLeft < g_iNumOfStages) HitLeft();
         if (iLink==g_iLinkRight && g_iCountRight < g_iNumOfStages) HitRight();
