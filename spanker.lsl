@@ -132,9 +132,9 @@ default
     touch_end(integer i)
     {
         key kAV = llDetectedKey(0);
-        vector kAVPos = llList2Vector(llGetObjectDetails(kAV, [OBJECT_POS]), 0);
+        vector vAVPos = llList2Vector(llGetObjectDetails(kAV, [OBJECT_POS]), 0);
         // note: 10.0=whisper, 20.0=say/chat, 100.0=shout distance.
-        if (llVecDist(llGetPos(), kAVPos) > 10.0) {
+        if (llVecDist(llGetPos(), vAVPos) > 10.0) {
             llRegionSayTo(kAV, 0, "You're too far away!");
             return;
         }
