@@ -1,4 +1,3 @@
-
 integer g_iChannel;
 integer g_iHandle = 0;
 
@@ -26,38 +25,38 @@ integer g_iRlvOn = 0;
 
 string g_sCurAnim = "";
 
-string TEXTURE = "ccf8fd66-54a4-43bf-971f-56c347913724"; // Fill in your texture UUID here!
+string TEXTURE = "6228bf3b-180e-410c-b6e9-78b09396a241"; // Fill in your texture UUID here!
+
+list g_lSlapSounds;
+list g_lAhSounds;
 
 SetRed(integer iFace, integer iIntensity)
 {
-    //float fAlpha = 1.0 - ((1.0 / g_iNumOfStages) * iIntensity);
     float fAlpha = ((1.0 / g_iNumOfStages) * iIntensity);
     llSetLinkPrimitiveParamsFast(g_iLinkBum, [PRIM_TEXTURE, iFace, TEXTURE, <1,1,1>, <0,0,0>, 0,
                                             PRIM_COLOR, iFace, <1,1,1>, fAlpha]);
 }
 
-PlayRandomAnim()
-{
-    if (!(llGetPermissions() & PERMISSION_TRIGGER_ANIMATION)) {
-        llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
-        return;
-    }
-    integer iNumAnims = llGetInventoryNumber(INVENTORY_ANIMATION);
-    if (iNumAnims == 0) return;
-    if (g_sCurAnim != "") llStopAnimation(g_sCurAnim);
-    if (iNumAnims == 1) g_sCurAnim = llGetInventoryName(INVENTORY_ANIMATION, 0);
-    else g_sCurAnim = llGetInventoryName(INVENTORY_ANIMATION, (integer)llFrand(iNumAnims));
-    llStartAnimation(g_sCurAnim);
-}
-
 PlayRandomSound()
 {
-    integer iNumSounds = llGetInventoryNumber(INVENTORY_SOUND);
-    string sSound;
-    if (iNumSounds == 0) return;
-    else if (iNumSounds == 1) sSound = llGetInventoryName(INVENTORY_SOUND, 0);
-    else sSound = llGetInventoryName(INVENTORY_SOUND, (integer)llFrand(iNumSounds));
-    llPlaySound(sSound, 1.0);
+    string sSlapSound;
+    string sAhSound;
+    integer iNumSounds = llGetListLength(g_lSlapSounds);
+    if (iNumSounds > 1)
+        sSlapSound = llList2String(g_lSlapSounds, (integer)llFrand(iNumSounds));
+    else if (iNumSounds == 1)
+        sSlapSound = llList2String(g_lSlapSounds, 0);
+    iNumSounds = llGetListLength(g_lAhSounds);
+    if (iNumSounds > 1)
+        sAhSound = llList2String(g_lAhSounds, (integer)llFrand(iNumSounds));
+    else if (iNumSounds == 1)
+        sAhSound = llList2String(g_lAhSounds, 0);
+    if (sSlapSound != "") llTriggerSound(sSlapSound, 0.5+llFrand(0.5));
+    if (sAhSound != "") {
+        integer iProbability = (integer)llFrand(20);
+        if (iProbability % 5 == 0)
+            llTriggerSound(sAhSound, 0.5+llFrand(0.5));
+    }
 }
 
 Reset()
@@ -74,30 +73,51 @@ Reset()
 
 HitLeft()
 {
-    if (g_iRlvOn && !g_iRlvLocked) {
-        llOwnerSay("@detach=n");
-        g_iRlvLocked = TRUE;
+    if (g_iCountLeft < g_iNumOfStages) {
+        if (g_iRlvOn && !g_iRlvLocked) {
+            llOwnerSay("@detach=n");
+            g_iRlvLocked = TRUE;
+        }
+        g_iCountLeft++;
+        SetRed(SIDE_LEFT, g_iCountLeft);
+        g_iTimeLeft = llGetUnixTime() + TIME_HEAL;
+        llSetTimerEvent(1.0);
     }
-    g_iCountLeft++;
-    SetRed(SIDE_LEFT, g_iCountLeft);
     PlayRandomSound();
-    PlayRandomAnim();
-    g_iTimeLeft = llGetUnixTime() + TIME_HEAL;
-    llSetTimerEvent(1.0);
+    llStartAnimation("spankass");
+    llStartAnimation("butt left");
 }
 
 HitRight()
 {
-    if (g_iRlvOn && !g_iRlvLocked) {
-        llOwnerSay("@detach=n");
-        g_iRlvLocked = TRUE;
+    if (g_iCountRight < g_iNumOfStages) {
+        if (g_iRlvOn && !g_iRlvLocked) {
+            llOwnerSay("@detach=n");
+            g_iRlvLocked = TRUE;
+        }
+        g_iCountRight++;
+        SetRed(SIDE_RIGHT, g_iCountRight);
+        g_iTimeRight = llGetUnixTime() + TIME_HEAL;
+        llSetTimerEvent(1.0);
     }
-    g_iCountRight++;
-    SetRed(SIDE_RIGHT, g_iCountRight);
     PlayRandomSound();
-    PlayRandomAnim();
-    g_iTimeRight = llGetUnixTime() + TIME_HEAL;
-    llSetTimerEvent(1.0);
+    llStartAnimation("spankass");
+    llStartAnimation("butt right");
+}
+
+ReloadSounds()
+{
+    integer i;
+    list SLAP_SOUND = ["slap", "spank", "hit"];
+    g_lSlapSounds = [];
+    g_lAhSounds = [];
+    for (i = 0; i < llGetInventoryNumber(INVENTORY_SOUND); i++) {
+        string sName = llGetInventoryName(INVENTORY_SOUND, i);
+        if (llSubStringIndex(llToLower(sName), "slap") >= 0 ||
+            llSubStringIndex(llToLower(sName), "spank") >= 0 ||
+            llSubStringIndex(llToLower(sName), "hit") >= 0) g_lSlapSounds += sName;
+        //else g_lAhSounds += sName;
+    }
 }
 
 default
@@ -117,6 +137,7 @@ default
         g_iTimeRLV = llGetUnixTime() + 120;
         llSetTimerEvent(30.0);
         llOwnerSay("@versionnew="+(string)g_iChannel);
+        ReloadSounds();
     }
 
     on_rez(integer i)
@@ -139,14 +160,14 @@ default
             return;
         }
         integer iLink = llDetectedLinkNumber(0);
-        if (iLink==g_iLinkLeft && g_iCountLeft < g_iNumOfStages) HitLeft();
-        if (iLink==g_iLinkRight && g_iCountRight < g_iNumOfStages) HitRight();
+        if (iLink==g_iLinkLeft) HitLeft();
+        if (iLink==g_iLinkRight) HitRight();
     }
 
     timer()
     {
         integer iTimeStamp = llGetUnixTime();
-        
+
         if (g_iTimeRLV) {
             if (g_iTimeRLV > iTimeStamp) llOwnerSay("@versionnew="+(string)g_iChannel);
             else {
@@ -185,11 +206,11 @@ default
             return;
         }
     }
-    
+
     listen(integer iChannel, string sName, key kID, string sMsg)
     {
         if (llGetOwnerKey(kID) != llGetOwner()) return;
-        
+
         if (~llSubStringIndex(sMsg, "RLV")) {
             // RLV detected w00t
             llSetTimerEvent(0.0);
@@ -198,5 +219,10 @@ default
             llListenRemove(g_iHandle);
             g_iHandle = 0;
         }
+    }
+
+    changed(integer iWhat)
+    {
+        if (iWhat & CHANGED_INVENTORY) ReloadSounds();
     }
 }
