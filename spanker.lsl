@@ -1,79 +1,74 @@
+
 integer g_iChannel;
 integer g_iHandle = 0;
 
-integer g_iLinkBum;
-integer g_iLinkTheme;
-
-integer g_iLinkLeft;
-integer g_iLinkRight;
-
-integer g_iCountLeft;
-integer g_iCountRight;
-
-integer g_iTimeLeft;
-integer g_iTimeRight;
-
-integer g_iTimeRLV;
-
-integer TIME_HEAL = 20;
+integer g_iLinkMesh;
 integer SIDE_LEFT = 0;
 integer SIDE_RIGHT = 1;
 
-integer g_iNumOfStages = 10;
-integer g_iRlvLocked = 0;
-integer g_iRlvOn = 0;
+integer g_iLinkLeft;
+integer g_iCountLeft;
+integer g_iTimeLeft;
+
+integer g_iLinkRight;
+integer g_iCountRight;
+integer g_iTimeRight;
+
+integer NUM_STAGES = 10;
+integer TIME_HEAL = 20;
+float   NEAR_DIST = 10.0; //10.0=whisper, 20.0=say/chat, 100.0=shout distance
+
+integer g_iTimerRLV;
+integer g_iRlvLocked = FALSE;
+integer g_iRlvOn = FALSE;
 
 string g_sCurAnim = "";
+string g_sTexture; // autodetected
 
-string TEXTURE = "6228bf3b-180e-410c-b6e9-78b09396a241"; // Fill in your texture UUID here!
-
-list g_lSlapSounds;
-list g_lAhSounds;
+list g_lSpankSounds;
+list g_lMoanSounds;
 
 SetRed(integer iFace, integer iIntensity)
 {
-    float fAlpha = ((1.0 / g_iNumOfStages) * iIntensity);
-    llSetLinkPrimitiveParamsFast(g_iLinkBum, [PRIM_TEXTURE, iFace, TEXTURE, <1,1,1>, <0,0,0>, 0,
+    float fAlpha = ((1.0 / NUM_STAGES) * iIntensity);
+    llSetLinkPrimitiveParamsFast(g_iLinkMesh, [PRIM_TEXTURE, iFace, g_sTexture, <1,1,1>, <0,0,0>, 0,
                                             PRIM_COLOR, iFace, <1,1,1>, fAlpha]);
 }
 
-PlayRandomSound()
+MakeSound()
 {
-    string sSlapSound;
-    string sAhSound;
-    integer iNumSounds = llGetListLength(g_lSlapSounds);
-    if (iNumSounds > 1)
-        sSlapSound = llList2String(g_lSlapSounds, (integer)llFrand(iNumSounds));
-    else if (iNumSounds == 1)
-        sSlapSound = llList2String(g_lSlapSounds, 0);
-    iNumSounds = llGetListLength(g_lAhSounds);
-    if (iNumSounds > 1)
-        sAhSound = llList2String(g_lAhSounds, (integer)llFrand(iNumSounds));
-    else if (iNumSounds == 1)
-        sAhSound = llList2String(g_lAhSounds, 0);
-    if (sSlapSound != "") llTriggerSound(sSlapSound, 0.5+llFrand(0.5));
-    if (sAhSound != "") {
+    string sSpankSound;
+    string sMoanSound;
+    integer iNumSounds = llGetListLength(g_lSpankSounds);
+    if (iNumSounds > 0)
+        sSpankSound = llList2String(g_lSpankSounds, (integer)llFrand(iNumSounds));
+    iNumSounds = llGetListLength(g_lMoanSounds);
+    if (iNumSounds > 0)
+        sMoanSound = llList2String(g_lMoanSounds, (integer)llFrand(iNumSounds));
+    if (sSpankSound != "") llTriggerSound(sSpankSound, 0.5+llFrand(0.5));
+    if (sMoanSound != "") {
         integer iProbability = (integer)llFrand(20);
         if (iProbability % 5 == 0)
-            llTriggerSound(sAhSound, 0.5+llFrand(0.5));
+            llTriggerSound(sMoanSound, 0.5+llFrand(0.5));
     }
 }
 
 Reset()
 {
-    llSetLinkTexture(g_iLinkBum, TEXTURE_TRANSPARENT, ALL_SIDES);
+    llSetTimerEvent(0.0);
     g_iCountLeft = 0;
+    SetRed(SIDE_LEFT, g_iCountLeft);
     g_iCountRight = 0;
+    SetRed(SIDE_RIGHT, g_iCountRight);
     if (g_iRlvOn && g_iRlvLocked) {
         llOwnerSay("@detach=y");
         g_iRlvLocked = FALSE;
     }
-    llSetTimerEvent(0.0);
 }
 
 HitLeft()
 {
-    if (g_iCountLeft < g_iNumOfStages) {
+    if (g_iCountLeft < NUM_STAGES) {
         if (g_iRlvOn && !g_iRlvLocked) {
             llOwnerSay("@detach=n");
             g_iRlvLocked = TRUE;
@@ -83,14 +78,14 @@ HitLeft()
         g_iTimeLeft = llGetUnixTime() + TIME_HEAL;
         llSetTimerEvent(1.0);
     }
-    PlayRandomSound();
-    llStartAnimation("spankass");
-    llStartAnimation("butt left");
+    MakeSound();
+    llStartAnimation("spank body");
+    llStartAnimation("spank left");
 }
 
 HitRight()
 {
-    if (g_iCountRight < g_iNumOfStages) {
+    if (g_iCountRight < NUM_STAGES) {
         if (g_iRlvOn && !g_iRlvLocked) {
             llOwnerSay("@detach=n");
             g_iRlvLocked = TRUE;
@@ -100,23 +95,21 @@ HitRight()
         g_iTimeRight = llGetUnixTime() + TIME_HEAL;
         llSetTimerEvent(1.0);
     }
-    PlayRandomSound();
-    llStartAnimation("spankass");
-    llStartAnimation("butt right");
+    MakeSound();
+    llStartAnimation("spank body");
+    llStartAnimation("spank right");
 }
 
 ReloadSounds()
 {
     integer i;
-    list SLAP_SOUND = ["slap", "spank", "hit"];
-    g_lSlapSounds = [];
-    g_lAhSounds = [];
+    g_lSpankSounds = [];
+    g_lMoanSounds = [];
     for (i = 0; i < llGetInventoryNumber(INVENTORY_SOUND); i++) {
         string sName = llGetInventoryName(INVENTORY_SOUND, i);
-        if (llSubStringIndex(llToLower(sName), "slap") >= 0 ||
-            llSubStringIndex(llToLower(sName), "spank") >= 0 ||
-            llSubStringIndex(llToLower(sName), "hit") >= 0) g_lSlapSounds += sName;
-        //else g_lAhSounds += sName;
+        if (~llSubStringIndex(llToUpper(sName), "SPANK")) g_lSpankSounds += sName;
+        else g_lMoanSounds += sName;
+        llPreloadSound(sName);
     }
 }
 
@@ -126,15 +119,14 @@ default
     {
         g_iLinkLeft = osGetLinkNumber("left");
         g_iLinkRight = osGetLinkNumber("right");
-        g_iLinkBum = osGetLinkNumber("bum");
-        g_iLinkTheme = LINK_ROOT;
+        g_iLinkMesh = osGetLinkNumber("mesh");
+        g_sTexture = llList2String(llGetLinkPrimitiveParams(g_iLinkMesh, [PRIM_TEXTURE, 0]), 0);
         Reset();
-        llPreloadSound("slap");
-        if (llGetAttached()) llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
+        if (llGetAttached()) llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION | PERMISSION_TAKE_CONTROLS);
         // RLV detection:
         g_iChannel = 9999 + llRound(llFrand(9999999.0));
         g_iHandle = llListen(g_iChannel, "", "", "");
-        g_iTimeRLV = llGetUnixTime() + 120;
+        g_iTimerRLV = llGetUnixTime() + 120;
         llSetTimerEvent(30.0);
         llOwnerSay("@versionnew="+(string)g_iChannel);
         ReloadSounds();
@@ -147,35 +139,34 @@ default
 
     run_time_permissions(integer iPerms)
     {
-
+        if (iPerms & PERMISSION_TAKE_CONTROLS) llTakeControls(CONTROL_DOWN, TRUE, TRUE);
     }
 
     touch_end(integer i)
     {
         key kAV = llDetectedKey(0);
         vector vAVPos = llList2Vector(llGetObjectDetails(kAV, [OBJECT_POS]), 0);
-        // note: 10.0=whisper, 20.0=say/chat, 100.0=shout distance.
-        if (llVecDist(llGetPos(), vAVPos) > 10.0) {
-            llRegionSayTo(kAV, 0, "You're too far away!");
+        if (llVecDist(llGetPos(), vAVPos) > NEAR_DIST) {
+            if (llGetAgentSize(kAV) != ZERO_VECTOR) llRegionSayTo(kAV, 0, "You're too far away!");
+            else llInstantMessage(kAV, "You're too far away!");
             return;
         }
         integer iLink = llDetectedLinkNumber(0);
         if (iLink==g_iLinkLeft) HitLeft();
-        if (iLink==g_iLinkRight) HitRight();
+        else if (iLink==g_iLinkRight) HitRight();
     }
 
     timer()
     {
         integer iTimeStamp = llGetUnixTime();
 
-        if (g_iTimeRLV) {
-            if (g_iTimeRLV > iTimeStamp) llOwnerSay("@versionnew="+(string)g_iChannel);
+        if (g_iTimerRLV) {
+            if (g_iTimerRLV > iTimeStamp) llOwnerSay("@versionnew="+(string)g_iChannel);
             else {
                 // no rlv detected, we'll do without
-                g_iTimeRLV = 0;
+                g_iTimerRLV = 0;
                 g_iRlvOn = FALSE;
                 g_iRlvLocked = FALSE;
-                llSetTimerEvent(0.0);
                 llListenRemove(g_iHandle);
                 g_iHandle = 0;
             }
@@ -197,13 +188,12 @@ default
                 g_iTimeRight = llGetUnixTime() + TIME_HEAL;
             }
         }
-        if (g_iCountLeft==0 && g_iCountRight==0) {
+        if (g_iCountLeft==0 && g_iCountRight==0 && g_iTimerRLV==0) {
             if (g_iRlvOn && g_iRlvLocked) {
                 llOwnerSay("@detach=y");
                 g_iRlvLocked = FALSE;
             }
             llSetTimerEvent(0.0);
-            return;
         }
     }
 
@@ -214,7 +204,7 @@ default
         if (~llSubStringIndex(sMsg, "RLV")) {
             // RLV detected w00t
             llSetTimerEvent(0.0);
-            g_iTimeRLV = 0; // Reset RLV detection timer
+            g_iTimerRLV = 0; // Reset RLV detection timer
             g_iRlvOn = TRUE;
             llListenRemove(g_iHandle);
             g_iHandle = 0;
@@ -224,5 +214,17 @@ default
     changed(integer iWhat)
     {
         if (iWhat & CHANGED_INVENTORY) ReloadSounds();
+    }
+
+    link_message(integer iLink, integer iSide, string sMethod, key kID)
+    {
+        // note: sMethod TBI; could be HAND, CANE etc
+        if (iSide == 0) HitLeft();
+        else if (iSide == 1) HitRight();
+        else if (iSide == -1) {
+            // no side specified, apply to both
+            HitLeft();
+            HitRight();
+        }
     }
 }
