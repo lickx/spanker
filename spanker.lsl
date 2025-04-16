@@ -14,9 +14,10 @@ integer g_iLinkRight;
 integer g_iCountRight;
 integer g_iTimeRight;
 
-integer NUM_STAGES = 10;
-integer TIME_HEAL = 20;
+integer NUM_STAGES = 10; //number of fades
+integer TIME_HEAL = 20; //seconds to heal one stage
 float   NEAR_DIST = 10.0; //10.0=whisper, 20.0=say/chat, 100.0=shout distance
+integer MOAN_PROBABILITY = 33; //percentage, 33% is 1 in 3 spanks
 
 integer g_iTimerRLV;
 integer g_iRlvLocked = FALSE;
@@ -47,8 +48,8 @@ MakeSound()
         sMoanSound = llList2String(g_lMoanSounds, (integer)llFrand(iNumSounds));
     if (sSpankSound != "") llTriggerSound(sSpankSound, 0.5+llFrand(0.5));
     if (sMoanSound != "") {
-        integer iProbability = (integer)llFrand(20);
-        if (iProbability % 5 == 0)
+        integer iProbability = (integer)llFrand(100);
+        if (iProbability < MOAN_PROBABILITY)
             llTriggerSound(sMoanSound, 0.5+llFrand(0.5));
     }
 }
@@ -111,6 +112,7 @@ ReloadSounds()
         else g_lMoanSounds += sName;
         llPreloadSound(sName);
     }
+    //llOwnerSay("Sounds preloaded. ("+(string)llGetListLength(g_lSpankSounds)+" spanks, "+(string)llGetListLength(g_lMoanSounds)+" moans)");
 }
 
 default

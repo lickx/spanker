@@ -1,27 +1,31 @@
 
-1) Rez rigged bum, name it 'bum'. Rigged attachments can't receive clicks.
+- Rez rigged mesh, name it 'mesh'. Rigged attachments can't receive clicks.
+- Apply the texture to the mesh
 
-2) Rez a cube as rootprim, name it 'Ruth2v4 spanker'
+- Rez a tiny cube as rootprim, name it 'My spanker' or anything you like
+- Apply the default transparent texture to the cube
+- Position the cube inside the mesh, and link the mesh to it
 
-3) Apply the default transparent texture to the cube
+- Rez two spheres, each 0.2 in x/y/z size, with transparent texture applied
+- Name one sphere 'left', and the other 'right'
+- Link the spheres to the linkset
 
-4) Position the cube inside bum, and link the bum to it
+- Copy animations. 'spank body' is a generic body animation.
+  'spank left' and 'spank right' can animate/jiggle those sides.
+- Copy sounds. Any sound with 'spank' in the name will be used on a hit.
+  Any other sounds will automatically be used as moans.
+- Copy the script
 
-5) Rez two spheres, each 0.2 in x/y/z size, with transparent texture applied
+- Take the linkset in inventory, attach to pelvis (spanker) or chest (slapper).
 
-6) Name one sphere 'left', and the other 'right'
+- Position the 'left' and 'right' spheres more or less over the left bum/breast
+  and right bum/breast (Edit linked)
 
-7) Position spheres roughly along the bum cheeks and link to the linkset
+- Test if everything works by clicking
 
-8) Copy animation, sound and script inside the rootprim
+If left vs right is opposite of what you expected, swap the numbers of
+SIDE_LEFT and SIDE_RIGHT in the script; they are the material slots of 'mesh'
 
-9) Take the linkset in inventory, attach to pelvis. This is important,
-   otherwise the non-rigged clickable spheres won't cover the avi's bum.
-
-10) Test if everything works
-
-
-* Spheres can be repositioned if clicks aren't received well
-
-* The full effect color and transparancy can be adjusted in the photoshop file
+Optionally tune other constants in the script: NUM_STAGES, TIME_HEAL, NEAR_DIST,
+MOAN_PROBABILITY.
 
